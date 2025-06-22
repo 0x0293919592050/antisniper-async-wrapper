@@ -27,7 +27,7 @@ Built on top of `aiohttp`.
 
 ```bash
 pip install aiohttp
-git clone https://github.com/0x0293919592050/antisniper-api.git
+git clone https://github.com/0x0293919592050/antisniper-async-wrapper.git
 cd antisniper-api
 pip install -e .
 ```
@@ -45,22 +45,6 @@ async def main():
 
 asyncio.run(main())
 ```
-
----
-
-## 🔧 Available Methods
-
-| Method                                       | Description                      |
-| -------------------------------------------- | -------------------------------- |
-| `convert(player, collection="mojang")`       | Convert username ⇄ UUID          |
-| `bulk_convert(players, collection="mojang")` | Bulk conversion (up to 100)      |
-| `mojang_data(uuid)`                          | Get Mojang profile info          |
-| `name_owners(name)`                          | Find all UUIDs that owned a name |
-| `online_check(players, reason)`              | Check online/offline status      |
-| `get_capes()`                                | Get cape texture URLs            |
-| `get_user()`                                 | Get API key information          |
-
----
 
 ## ❗ Exceptions
 
