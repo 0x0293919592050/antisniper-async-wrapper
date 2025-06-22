@@ -7,6 +7,17 @@ class AntisniperAPI:
         self.url = baseUrl
         self.session = aiohttp.ClientSession()
         self.session.headers.add("Apikey", self.key)
+        self.player = Player(self)
+        self.user = User(self)
+
+    async def close(self):
+        await self.session.close()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close()
 
     async def get(self, endpoint: str, params: dict = None) -> dict:
         try:
@@ -17,6 +28,7 @@ class AntisniperAPI:
 
     async def post(self, endpoint: str, body: dict = None, headers: dict = None) -> dict:
         try:
+            headers = {**self.session.headers, **(headers or {})}
             async with self.session.post(self.url + endpoint, json=body or {}, headers=headers) as r:
                 return await self._handle_response(r)
         except aiohttp.ClientError as e:
@@ -41,7 +53,7 @@ class AntisniperAPI:
         Converts UUID <-> IGN for up to 100 players using Antisniper databases.
 
         Args:
-            players (list): A list of players to be checked.
+            players (list): A list of players to check.
             collection (str, optional): Collection to use. Available values: "mojang", "hypixel". Default to "mojang".
 
         Returns:
@@ -79,7 +91,7 @@ class AntisniperAPI:
         params = {'name': name}
         return await self.get("/mojang/name", params)
 
-    async def online_check(self, players: list, reason: str):
+    async def online_check(self, players: list, reason: str) -> dict:
         """
         Check the online / offline status of up to 100 accounts. Accurate to 10 minutes.
         You have to briefly describe your use case for this endpoint.
@@ -96,7 +108,7 @@ class AntisniperAPI:
         headers = {'reason': reason}
         return await self.post("/other/online", data, headers)
 
-    async def get_capes(self):
+    async def get_capes(self) -> dict:
         """
         Get texture URLs for each cape type.
 
@@ -105,14 +117,18 @@ class AntisniperAPI:
         """
         return await self.get("/capes")
 
-    async def get_user(self):
+    async def get_blacklist(self, player: str, token: str = None) -> dict:
         """
-        Returns all information stored by Antisniper on the current user.
-
+        Checks if a player is considered a Hacker or Sniper.
+        Args:
+            player (str): Player to check.
+            token (str, optional): Blacklist token to be used.
         Returns:
-            dict: Result with user data obtained from the Antisniper API
+            dict: Result with blacklist data obtained from the Antisniper API.
         """
-
+        params = {'player': player}
+        if token: params['token'] = token
+        return await self.get("/blacklist", params)
 
     async def _handle_response(self, r: aiohttp.ClientResponse) -> dict:
         match r.status:
@@ -126,3 +142,114 @@ class AntisniperAPI:
                 raise AntisniperRatelimitException()
             case _:
                 raise AntisniperUnknownException()
+
+class Player:
+    """A class with all /player endpoints."""
+    def __init__(self, api: AntisniperAPI, endpoint="/player"):
+        self.api = api
+        self.endpoint = endpoint
+
+    async def get_ping(self, player: str, legacy: bool = False, lookback: int = None) -> dict:
+        """
+        Returns ping data for a provided player.
+        **WARNING**: This endpoint is premium-only.
+        Args:
+            player (str): Player to check.
+            legacy (bool): Whether to use the slower legacy ping data collection.
+            lookback (int): How many seconds to search back for player ping from the current time (legacy only).
+        Returns:
+            dict: Result with ping data obtained from the Antisniper API.
+        """
+        params = {
+            'player': player,
+            'legacy': legacy,
+            'lookback': lookback
+        }
+        return await self.api.get(self.endpoint + "/ping", params)
+
+    async def quickshop(self, player: str) -> dict:
+        """
+        Returns quickshop of the provided player and a list of up to 1000 other
+        players with the same quickshop layout on Hypixel.
+        **WARNING**: This endpoint is premium-only.
+        Args:
+            player (str): Player to be checked.
+        Returns:
+            dict: Result with quickshop data obtained from the Antisniper API.
+        """
+        params = {'player': player}
+        return await self.api.get(self.endpoint + "/quickshop", params)
+
+    async def chat_history(self, player: str, limit: int = None) -> dict:
+        """
+        Returns Hypixel chat history of the provided player.
+        **WARNING**: This endpoint is premium-only.
+        Args:
+            player (str): Player to be checked.
+            limit (int, optional): Limit to be used. (A negative limit will return data from newest).
+        Returns:
+            dict: Result with chat history data obtained from the Antisniper API.
+        """
+        params: dict = {'player': player}
+        if limit: params['limit'] = limit
+        return await self.api.get(self.endpoint + "/chat", params)
+
+class User:
+    """A class with all /user endpoints."""
+    def __init__(self, api: AntisniperAPI, endpoint="/user"):
+        self.api = api
+        self.endpoint = endpoint
+
+    async def get(self) -> dict:
+        """
+        Get all information that Antisniper has stored for the current user
+
+        Returns:
+            dict: Result with user data obtained from the Antisniper API.
+        """
+        return await self.api.get(self.endpoint)
+
+    async def get_requests(self) -> dict:
+        """
+        Get all requests to the API in the last hour.
+
+        Returns:
+            dict: Result with requests data obtained from the Antisniper API.
+        """
+        return await self.api.get(self.endpoint + "/requests")
+
+    async def get_old_requests(self) -> dict:
+        """
+        Get up to 1000 of the user's most recent requests to the API.
+
+        Returns:
+            dict: Result with requests data obtained from the Antisniper API.
+        """
+        return await self.api.get(self.endpoint + "/requests/old")
+
+    async def get_products(self) -> dict:
+        """
+        Get active and expired products purchased by the user.
+
+        Returns:
+            dict: Result with products data obtained from the Antisniper API.
+        """
+        return await self.api.get(self.endpoint + "/products")
+
+    async def get_usage(self) -> dict:
+        """
+        Get the number of requests every hour that the user has ever requested the API.
+
+        Returns:
+            dict: Result with usage data obtained from the Antisniper API.
+        """
+        return await self.api.get(self.endpoint + "/usage")
+
+    async def get_endpoint_usage(self) -> dict:
+        """
+        Get the number of requests to each path in the API.
+
+        Returns:
+            dict: Result with endpoint usage data obtained from the Antisniper API.
+        """
+        return await self.api.get(self.endpoint + "/usage/paths")
