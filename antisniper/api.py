@@ -6,7 +6,8 @@ class AntisniperAPI:
         self.key = key
         self.url = baseUrl
         self.session = aiohttp.ClientSession()
-        self.session.headers.add("Apikey", self.key)
+        self._default_headers = {"Apikey": self.key}
+        self.session = aiohttp.ClientSession(headers=self._default_headers)
         self.player = Player(self)
         self.user = User(self)
 
@@ -28,7 +29,7 @@ class AntisniperAPI:
 
     async def post(self, endpoint: str, body: dict = None, headers: dict = None) -> dict:
         try:
-            headers = {**self.session.headers, **(headers or {})}
+            headers = {**self._default_headers, **(headers or {})}
             async with self.session.post(self.url + endpoint, json=body or {}, headers=headers) as r:
                 return await self._handle_response(r)
         except aiohttp.ClientError as e:
