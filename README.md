@@ -27,7 +27,7 @@ Built on top of `aiohttp`.
 
 ```bash
 pip install aiohttp
-git clone https://github.com/0x0293919592050/antisniper-api.git
+git clone https://github.com/0x0293919592050/antisniper-async-wrapper.git
 cd antisniper-api
 pip install -e .
 ```
