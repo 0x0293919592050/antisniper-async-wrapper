@@ -1,0 +1,9 @@
+[project]
+name = "antisniper-api"
+version = "0.1.0"
+description = "Async wrapper for Antisniper API"
+dependencies = ["aiohttp"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
