@@ -1,5 +1,5 @@
 [project]
-name = "antisniper-api"
+name = "antisniper_api"
 version = "0.1.0"
 description = "Async wrapper for Antisniper API"
 dependencies = ["aiohttp"]
